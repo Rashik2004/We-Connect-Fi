@@ -1,5 +1,5 @@
-const wifiService = require('../services/wifiService');
-const { getClientIP, getSubnetFromIP } = require('../utils/networkDetection');
+const wifiService = require("../services/wifiService");
+const { getClientIP, getSubnetFromIP } = require("../utils/networkDetection");
 
 // @desc    Get users on same WiFi network
 // @route   GET /api/wifi/users
@@ -12,7 +12,7 @@ exports.getNetworkUsers = async (req, res) => {
     if (!subnet) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot detect network'
+        message: "Cannot detect network",
       });
     }
 
@@ -21,13 +21,13 @@ exports.getNetworkUsers = async (req, res) => {
     res.json({
       success: true,
       subnet,
-      users
+      users,
     });
   } catch (error) {
-    console.error('Get network users error:', error);
+    console.error("Get network users error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
@@ -43,28 +43,43 @@ exports.getWiFiGroup = async (req, res) => {
     if (!subnet) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot detect network'
+        message: "Cannot detect network",
       });
     }
 
     const wifiGroup = await wifiService.getWiFiGroupDetails(subnet);
 
     if (!wifiGroup) {
+      // Attempt to join/create group if it doesn't exist (Lazy Join)
+      try {
+        await wifiService.joinWiFiGroup(req.user._id, clientIP);
+        const newGroup = await wifiService.getWiFiGroupDetails(subnet);
+
+        if (newGroup) {
+          return res.json({
+            success: true,
+            wifiGroup: newGroup,
+          });
+        }
+      } catch (error) {
+        console.error("Lazy join failed:", error);
+      }
+
       return res.status(404).json({
         success: false,
-        message: 'WiFi group not found'
+        message: "WiFi group not found",
       });
     }
 
     res.json({
       success: true,
-      wifiGroup
+      wifiGroup,
     });
   } catch (error) {
-    console.error('Get WiFi group error:', error);
+    console.error("Get WiFi group error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };

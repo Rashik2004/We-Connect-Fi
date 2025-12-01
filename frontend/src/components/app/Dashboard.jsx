@@ -71,15 +71,28 @@ const FriendsPage = () => {
   const navigate = useNavigate();
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      const [requests, currentFriends] = await Promise.all([
+      const [requestsResult, friendsResult] = await Promise.allSettled([
         getFriendRequests(),
         getFriends(),
       ]);
-      setFriendRequests(requests);
-      setFriends(currentFriends);
+
+      if (requestsResult.status === 'fulfilled') {
+        setFriendRequests(requestsResult.value);
+      } else {
+        console.error('Failed to load requests:', requestsResult.reason);
+        // Don't toast here to avoid spamming, just log it
+      }
+
+      if (friendsResult.status === 'fulfilled') {
+        setFriends(friendsResult.value);
+      } else {
+        console.error('Failed to load friends:', friendsResult.reason);
+        toast.error('Failed to load friends list');
+      }
     } catch (error) {
-      console.error('Failed to load friend data', error);
+      console.error('Unexpected error loading friend data', error);
       toast.error('Unable to load friend data.');
     } finally {
       setLoading(false);
@@ -110,6 +123,12 @@ const FriendsPage = () => {
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             Accept or decline new connection requests
+            <button
+              onClick={loadData}
+              className="ml-4 text-sm text-cyan-500 hover:text-cyan-400 underline"
+            >
+              Refresh
+            </button>
           </p>
           <div className="space-y-4">
             {loading ? (

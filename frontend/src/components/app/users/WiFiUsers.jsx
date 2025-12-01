@@ -9,8 +9,10 @@ import Badge from '../../ui/Badge';
 import ChatWindow from '../chat/ChatWindow';
 import toast from 'react-hot-toast';
 import { fetchWifiUsers, fetchWifiGroup, sendFriendRequest } from '../../../services/api';
+import useAuthStore from '../../../stores/authStore';
 
 const WiFiUsers = () => {
+  const { user: currentUser } = useAuthStore();
   const [wifiUsers, setWifiUsers] = useState([]);
   const [wifiGroup, setWifiGroup] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ const WiFiUsers = () => {
         if (!isMounted) return;
 
         if (usersResponse.status === 'fulfilled') {
-          setWifiUsers(usersResponse.value.users);
+          setWifiUsers(usersResponse.value.users || []);
         }
 
         if (groupResponse.status === 'fulfilled') {
@@ -50,7 +52,7 @@ const WiFiUsers = () => {
     socketService.emit('get-wifi-users');
 
     const handleUsersUpdate = ({ users }) => {
-      setWifiUsers(users);
+      setWifiUsers(users || []);
       setLoading(false);
     };
 
@@ -111,7 +113,7 @@ const WiFiUsers = () => {
             </div>
             <Badge variant="neon" size="lg">
               <FaUsers className="mr-2" />
-              {wifiUsers.length} Online
+              {wifiUsers?.length || 0} Online
             </Badge>
           </div>
         </Card>
@@ -144,7 +146,7 @@ const WiFiUsers = () => {
 
       {/* Users List */}
       <div className="space-y-4">
-        {wifiUsers.length === 0 ? (
+        {wifiUsers?.length === 0 ? (
           <Card className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-dark-700 flex items-center justify-center">
               <FaUsers className="text-3xl text-gray-400" />
@@ -157,7 +159,7 @@ const WiFiUsers = () => {
             </p>
           </Card>
         ) : (
-          wifiUsers.map((user, index) => (
+          wifiUsers?.map((user, index) => (
             <motion.div
               key={user._id}
               initial={{ opacity: 0, y: 20 }}
@@ -169,6 +171,7 @@ const WiFiUsers = () => {
                 onSendMessage={handleSendMessage}
                 onAddFriend={handleAddFriend}
                 isFriend={user.isFriend}
+                isSelf={currentUser?._id === user._id}
               />
             </motion.div>
           ))

@@ -35,9 +35,9 @@ const SettingsPage = () => {
     try {
       setLoading(true);
       const settings = await getSettings();
-      setPrivacySettings(settings.privacy || privacySettings);
-      setNotificationSettings(settings.notifications || notificationSettings);
-      setNetworkInfo(settings.network || networkInfo);
+      setPrivacySettings(settings?.privacy || privacySettings);
+      setNotificationSettings(settings?.notifications || notificationSettings);
+      setNetworkInfo(settings?.network || networkInfo);
     } catch (error) {
       console.error('Failed to load settings', error);
       toast.error('Failed to load settings');

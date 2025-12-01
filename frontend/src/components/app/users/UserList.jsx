@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Avatar from '../../ui/Avatar';
 import { clsx } from 'clsx';
 
-const UserList = ({ users, selectedUser, onSelectUser, showSearch = true }) => {
+const UserList = ({ users = [], selectedUser, onSelectUser, showSearch = true }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredUsers = users.filter((user) =>

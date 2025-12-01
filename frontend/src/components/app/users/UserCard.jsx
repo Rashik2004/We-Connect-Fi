@@ -4,7 +4,7 @@ import Badge from '../../ui/Badge';
 import Button from '../../ui/Button';
 import Card from '../../ui/Card';
 
-const UserCard = ({ user, onSendMessage, onAddFriend, isFriend = false }) => {
+const UserCard = ({ user, onSendMessage, onAddFriend, isFriend = false, isSelf = false }) => {
   const deviceType = user?.deviceInfo?.type || user?.device || 'laptop';
   const deviceIcon = deviceType === 'phone' || deviceType === 'mobile' ? <FaMobileAlt /> : <FaLaptop />;
 
@@ -64,7 +64,7 @@ const UserCard = ({ user, onSendMessage, onAddFriend, isFriend = false }) => {
               Message
             </Button>
           )}
-          {onAddFriend && !isFriend && (
+          {onAddFriend && !isFriend && !isSelf && (
             <Button
               variant="outline"
               size="sm"

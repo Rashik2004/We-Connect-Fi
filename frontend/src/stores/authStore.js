@@ -1,11 +1,12 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import axios from 'axios';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 // Configure axios defaults
-axios.defaults.baseURL = API_URL;
+// Configure axios defaults
+// axios.defaults.baseURL = API_URL;
 
 const useAuthStore = create(
   persist(
@@ -19,11 +20,11 @@ const useAuthStore = create(
       // Set auth token in axios headers
       setAuthToken: (token) => {
         if (token) {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          localStorage.setItem('token', token);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          localStorage.setItem("token", token);
         } else {
-          delete axios.defaults.headers.common['Authorization'];
-          localStorage.removeItem('token');
+          delete axios.defaults.headers.common["Authorization"];
+          localStorage.removeItem("token");
         }
       },
 
@@ -31,7 +32,7 @@ const useAuthStore = create(
       register: async (userData) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axios.post('/auth/register', userData);
+          const response = await axios.post("/api/auth/register", userData);
           const { token, user } = response.data;
 
           get().setAuthToken(token);
@@ -45,7 +46,8 @@ const useAuthStore = create(
 
           return { success: true };
         } catch (error) {
-          const errorMessage = error.response?.data?.message || 'Registration failed';
+          const errorMessage =
+            error.response?.data?.message || "Registration failed";
           set({ error: errorMessage, isLoading: false });
           return { success: false, error: errorMessage };
         }
@@ -55,7 +57,7 @@ const useAuthStore = create(
       login: async (credentials) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axios.post('/auth/login', credentials);
+          const response = await axios.post("/api/auth/login", credentials);
           const { token, user } = response.data;
 
           get().setAuthToken(token);
@@ -69,7 +71,8 @@ const useAuthStore = create(
 
           return { success: true };
         } catch (error) {
-          const errorMessage = error.response?.data?.message || 'Login failed';
+          console.error("Login error details:", error.response || error);
+          const errorMessage = error.response?.data?.message || "Login failed";
           set({ error: errorMessage, isLoading: false });
           return { success: false, error: errorMessage };
         }
@@ -79,7 +82,7 @@ const useAuthStore = create(
       googleAuth: async (googleData) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axios.post('/auth/google', googleData);
+          const response = await axios.post("/api/auth/google", googleData);
           const { token, user } = response.data;
 
           get().setAuthToken(token);
@@ -93,7 +96,8 @@ const useAuthStore = create(
 
           return { success: true };
         } catch (error) {
-          const errorMessage = error.response?.data?.message || 'Google authentication failed';
+          const errorMessage =
+            error.response?.data?.message || "Google authentication failed";
           set({ error: errorMessage, isLoading: false });
           return { success: false, error: errorMessage };
         }
@@ -102,9 +106,9 @@ const useAuthStore = create(
       // Logout
       logout: async () => {
         try {
-          await axios.post('/auth/logout');
+          await axios.post("/api/auth/logout");
         } catch (error) {
-          console.error('Logout error:', error);
+          console.error("Logout error:", error);
         }
 
         get().setAuthToken(null);
@@ -119,21 +123,24 @@ const useAuthStore = create(
 
       // Get current user
       fetchUser: async () => {
-        const token = get().token || localStorage.getItem('token');
+        const token = get().token || localStorage.getItem("token");
 
         if (!token) return;
 
         get().setAuthToken(token);
 
         try {
-          const response = await axios.get('/auth/me');
+          const response = await axios.get("/api/auth/me");
           set({
             user: response.data.user,
             isAuthenticated: true,
           });
         } catch (error) {
-          console.error('Fetch user error:', error);
-          get().logout();
+          console.error("Fetch user error:", error);
+          // Only logout if unauthorized
+          if (error.response && error.response.status === 401) {
+            get().logout();
+          }
         }
       },
 
@@ -148,7 +155,7 @@ const useAuthStore = create(
       clearError: () => set({ error: null }),
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       partialize: (state) => ({
         token: state.token,
         user: state.user,

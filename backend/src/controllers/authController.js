@@ -1,11 +1,12 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { detectDeviceType } = require('../utils/networkDetection');
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const { detectDeviceType, getClientIP } = require("../utils/networkDetection");
+const wifiService = require("../services/wifiService");
 
 // Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: "30d",
   });
 };
 
@@ -19,12 +20,12 @@ exports.register = async (req, res) => {
     const email = req.body.email?.toLowerCase().trim();
     const password = req.body.password;
     const dateOfBirth = req.body.dateOfBirth;
-    const bio = req.body.bio?.trim() || '';
+    const bio = req.body.bio?.trim() || "";
 
     if (!username || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Username, email, and password are required'
+        message: "Username, email, and password are required",
       });
     }
 
@@ -34,17 +35,22 @@ exports.register = async (req, res) => {
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: userExists.email === email ? 'Email already registered' : 'Username already taken'
+        message:
+          userExists.email === email
+            ? "Email already registered"
+            : "Username already taken",
       });
     }
 
     // Detect device type
-    const deviceType = detectDeviceType(req.headers['user-agent']);
+    const deviceType = detectDeviceType(req.headers["user-agent"]);
 
     // Prepare avatar URL
     let avatarUrl = null;
     if (req.file) {
-      avatarUrl = `${req.protocol}://${req.get('host')}/uploads/avatars/${req.file.filename}`;
+      avatarUrl = `${req.protocol}://${req.get("host")}/uploads/avatars/${
+        req.file.filename
+      }`;
     }
 
     // Create user
@@ -54,12 +60,23 @@ exports.register = async (req, res) => {
       password,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       bio,
-      avatar: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+      avatar:
+        avatarUrl ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
       deviceInfo: {
         type: deviceType,
-        userAgent: req.headers['user-agent']
-      }
+        userAgent: req.headers["user-agent"],
+      },
     });
+
+    // Join WiFi group
+    try {
+      const clientIP = getClientIP(req);
+      await wifiService.joinWiFiGroup(user._id, clientIP);
+    } catch (error) {
+      console.error("Failed to join WiFi group:", error);
+      // Continue registration even if WiFi join fails
+    }
 
     const token = generateToken(user._id);
 
@@ -72,14 +89,14 @@ exports.register = async (req, res) => {
         email: user.email,
         avatar: user.avatar,
         bio: user.bio,
-        deviceInfo: user.deviceInfo
-      }
+        deviceInfo: user.deviceInfo,
+      },
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error("Register error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error during registration'
+      message: "Server error during registration",
     });
   }
 };
@@ -92,12 +109,12 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
@@ -107,17 +124,25 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
     // Update device info
-    const deviceType = detectDeviceType(req.headers['user-agent']);
+    const deviceType = detectDeviceType(req.headers["user-agent"]);
     user.deviceInfo = {
       type: deviceType,
-      userAgent: req.headers['user-agent']
+      userAgent: req.headers["user-agent"],
     };
     await user.save();
+
+    // Join WiFi group
+    try {
+      const clientIP = getClientIP(req);
+      await wifiService.joinWiFiGroup(user._id, clientIP);
+    } catch (error) {
+      console.error("Failed to join WiFi group:", error);
+    }
 
     const token = generateToken(user._id);
 
@@ -132,14 +157,14 @@ exports.login = async (req, res) => {
         bio: user.bio,
         status: user.status,
         deviceInfo: user.deviceInfo,
-        friends: user.friends
-      }
+        friends: user.friends,
+      },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error during login'
+      message: "Server error during login",
     });
   }
 };
@@ -162,15 +187,24 @@ exports.googleAuth = async (req, res) => {
     } else {
       // Create new user
       user = await User.create({
-        username: (username || email.split('@')[0]).trim(),
+        username: (username || email.split("@")[0]).trim(),
         email: email.toLowerCase().trim(),
         googleId,
-        avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        avatar:
+          avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
         deviceInfo: {
-          type: detectDeviceType(req.headers['user-agent']),
-          userAgent: req.headers['user-agent']
-        }
+          type: detectDeviceType(req.headers["user-agent"]),
+          userAgent: req.headers["user-agent"],
+        },
       });
+    }
+
+    // Join WiFi group
+    try {
+      const clientIP = getClientIP(req);
+      await wifiService.joinWiFiGroup(user._id, clientIP);
+    } catch (error) {
+      console.error("Failed to join WiFi group:", error);
     }
 
     const token = generateToken(user._id);
@@ -184,14 +218,14 @@ exports.googleAuth = async (req, res) => {
         email: user.email,
         avatar: user.avatar,
         bio: user.bio,
-        deviceInfo: user.deviceInfo
-      }
+        deviceInfo: user.deviceInfo,
+      },
     });
   } catch (error) {
-    console.error('Google auth error:', error);
+    console.error("Google auth error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error during Google authentication'
+      message: "Server error during Google authentication",
     });
   }
 };
@@ -201,18 +235,20 @@ exports.googleAuth = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('friends', 'username avatar isOnline status deviceInfo');
+    const user = await User.findById(req.user._id).populate(
+      "friends",
+      "username avatar isOnline status deviceInfo"
+    );
 
     res.json({
       success: true,
-      user
+      user,
     });
   } catch (error) {
-    console.error('Get me error:', error);
+    console.error("Get me error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
@@ -225,18 +261,18 @@ exports.logout = async (req, res) => {
     // Update user online status
     await User.findByIdAndUpdate(req.user._id, {
       isOnline: false,
-      lastSeen: new Date()
+      lastSeen: new Date(),
     });
 
     res.json({
       success: true,
-      message: 'Logged out successfully'
+      message: "Logged out successfully",
     });
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error("Logout error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error during logout'
+      message: "Server error during logout",
     });
   }
 };
