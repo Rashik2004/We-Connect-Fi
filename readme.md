@@ -30,6 +30,6 @@ We-Connect-Fi is a futuristic, WiFi-aware messenger for students in campus or ho
    - Landing page with hero, features, how-it-works, security, CTA, and footer
    - WiFi page combines live roster cards with an embedded group chat window
 
-Use the accompanying docs for detailed API shapes, socket contracts, deployment, and mockup notes.***
+
 
 
